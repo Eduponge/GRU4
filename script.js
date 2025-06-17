@@ -7,23 +7,17 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
       return;
     }
 
-    // Hora e minuto atual em America/Sao_Paulo
+    // Hora atual em America/Sao_Paulo (com seconds zerados para evitar inconsistências de segundo)
     const now = new Date();
-    const nowSaoPaulo = new Date(now.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
-    const currentHour = nowSaoPaulo.getHours();
-    const currentMinute = nowSaoPaulo.getMinutes();
+    const nowSaoPaulo = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    nowSaoPaulo.setSeconds(0, 0);
 
-    // Filtra voos cujo ETA seja maior que a hora e minuto atual
+    // Filtra voos cujo ETA (estimated_in) seja maior que a data/hora/minuto atual
     const filteredArrivals = arrivals.filter(flight => {
       if (!flight.estimated_in) return false;
-      const etaDate = new Date(flight.estimated_in);
-      const etaSaoPaulo = new Date(etaDate.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
-      const etaHour = etaSaoPaulo.getHours();
-      const etaMinute = etaSaoPaulo.getMinutes();
-      // Só mostra se ETA > agora
-      if (etaHour > currentHour) return true;
-      if (etaHour === currentHour && etaMinute > currentMinute) return true;
-      return false;
+      const etaSaoPaulo = new Date(new Date(flight.estimated_in).toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+      etaSaoPaulo.setSeconds(0, 0);
+      return etaSaoPaulo > nowSaoPaulo;
     });
 
     // Calcula o atraso em minutos para cada voo restante
