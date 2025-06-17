@@ -2,3 +2,37 @@ body { font-family: Arial, sans-serif; margin: 40px auto; max-width: 900px; back
 h1 { text-align: center; color: #2874A6; }
 #flights { margin-top: 32px; }
 .flight { background: #fff; margin-bottom: 8px; padding: 12px; box-shadow: 0 1px 4px #0001; }
+
+table.flights-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 auto 16px auto;
+  background: #fff;
+  box-shadow: 0 1px 4px #0001;
+}
+table.flights-table th, table.flights-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+  font-size: 15px;
+}
+table.flights-table th {
+  background: #2874A6;
+  color: #fff;
+  font-weight: bold;
+  font-size: 16px;
+}
+table.flights-table tr:last-child td {
+  border-bottom: none;
+}
+.delay-negative {
+  color: #229954;
+  font-weight: bold;
+}
+.delay-zero {
+  color: #777;
+}
+.delay-positive {
+  color: #c0392b;
+  font-weight: bold;
+}
