@@ -2,12 +2,9 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
   .then(res => res.json())
   .then(data => {
     const arrivals = (data && data.success && data.data.arrivals) ? data.data.arrivals : [];
-    if (!arrivals.length) {
-      document.getElementById('flights').innerText = 'Nenhum voo encontrado.';
-      return;
-    }
+    console.log("Total voos recebidos:", arrivals.length, arrivals);
 
-    // Filtra apenas voos para GRU (SBGR ou GRU) e progress_percent < 100
+    // Filtro: GRU + progress < 100
     const filteredArrivals = arrivals.filter(flight => {
       const destIcao = flight.destination?.code_icao;
       const destIata = flight.destination?.code_iata;
@@ -18,23 +15,21 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
         progress < 100
       );
     });
+    console.log("Voos filtrados (GRU e progress<100):", filteredArrivals.length, filteredArrivals);
 
     if (!filteredArrivals.length) {
       document.getElementById('flights').innerText = 'Nenhum voo encontrado.';
       return;
     }
 
-    // Calcula atraso
     filteredArrivals.forEach(flight => {
       const sta = new Date(flight.scheduled_in);
       const eta = new Date(flight.estimated_in);
       flight.delay = Math.round((eta - sta) / 60000);
     });
 
-    // Ordena por atraso
     filteredArrivals.sort((a, b) => b.delay - a.delay);
 
-    // Monta tabela
     const html = `
       <table class="flights-table">
         <thead>
@@ -72,6 +67,7 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
     `;
     document.getElementById('flights').innerHTML = html;
   })
-  .catch(() => {
+  .catch((e) => {
     document.getElementById('flights').innerText = 'Erro ao carregar os voos.';
+    console.error(e);
   });
