@@ -7,12 +7,9 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
       return;
     }
 
-    // Definição de status "acabou de chegar"
     function acabouDeChegar(flight) {
-      // Considera status indicando chegada e progress 100
       if (typeof flight.progress_percent !== "number" || flight.progress_percent !== 100) return false;
       const status = (flight.status || "").toLowerCase();
-      // Ajuste os termos conforme sua fonte de dados
       return (
         status.includes("chegou") ||
         status.includes("aterrissou") ||
@@ -22,13 +19,18 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
       );
     }
 
-    // Filtra voos para GRU em andamento OU que acabaram de chegar
     const filteredArrivals = arrivals.filter(flight => {
       const destIcao = (flight.destination?.code_icao || '').toUpperCase();
       const destIata = (flight.destination?.code_iata || '').toUpperCase();
-      const progress = typeof flight.progress_percent === "number" ? flight.progress_percent : null;
+      const progressRaw = flight.progress_percent;
+      const progress = typeof progressRaw === "number" ? progressRaw : null;
       const isGRU = destIcao === "SBGR" || destIata === "GRU";
-      return isGRU && (progress < 100 || acabouDeChegar(flight));
+      // Inclui progress null
+      return isGRU && (
+        progress === null ||
+        progress < 100 ||
+        acabouDeChegar(flight)
+      );
     });
 
     if (!filteredArrivals.length) {
@@ -36,17 +38,19 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
       return;
     }
 
-    // Calcula atraso
     filteredArrivals.forEach(flight => {
-      const sta = new Date(flight.scheduled_in);
-      const eta = new Date(flight.estimated_in);
-      flight.delay = Math.round((eta - sta) / 60000);
+      const sta = flight.scheduled_in ? new Date(flight.scheduled_in) : null;
+      const eta = flight.estimated_in ? new Date(flight.estimated_in) : null;
+      flight.delay = (sta && eta) ? Math.round((eta - sta) / 60000) : '-';
     });
 
-    // Ordena por atraso
-    filteredArrivals.sort((a, b) => b.delay - a.delay);
+    filteredArrivals.sort((a, b) => {
+      if (a.delay === '-' && b.delay === '-') return 0;
+      if (a.delay === '-') return 1;
+      if (b.delay === '-') return -1;
+      return b.delay - a.delay;
+    });
 
-    // Monta tabela
     const html = `
       <table class="flights-table">
         <thead>
@@ -63,11 +67,11 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
         </thead>
         <tbody>
           ${filteredArrivals.map(flight => {
-            const sta = new Date(flight.scheduled_in).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
-            const eta = new Date(flight.estimated_in).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+            const sta = flight.scheduled_in ? new Date(flight.scheduled_in).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }) : '-';
+            const eta = flight.estimated_in ? new Date(flight.estimated_in).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }) : '-';
             let delayClass = 'delay-zero';
-            if (flight.delay > 0) delayClass = 'delay-positive';
-            else if (flight.delay < 0) delayClass = 'delay-negative';
+            if (flight.delay !== '-' && flight.delay > 0) delayClass = 'delay-positive';
+            else if (flight.delay !== '-' && flight.delay < 0) delayClass = 'delay-negative';
             return `
               <tr>
                 <td>${flight.operator_icao || '-'}</td>
@@ -76,7 +80,7 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
                 <td>${sta}</td>
                 <td>${eta}</td>
                 <td class="${delayClass}">${flight.delay}</td>
-                <td>${typeof flight.progress_percent === "number" ? flight.progress_percent : '-'}</td>
+                <td>${flight.progress_percent !== null && flight.progress_percent !== undefined ? flight.progress_percent : '-'}</td>
                 <td>${flight.status || '-'}</td>
               </tr>
             `;
