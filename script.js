@@ -1,14 +1,13 @@
 fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
   .then(res => res.json())
   .then(data => {
-    // Pega as chegadas, ou array vazio se não houver dados válidos
     const arrivals = (data && data.success && data.data.arrivals) ? data.data.arrivals : [];
     if (!arrivals.length) {
       document.getElementById('flights').innerText = 'Nenhum voo encontrado.';
       return;
     }
 
-    // Filtra voos cuja chegada é para GRU e progress_percent < 100
+    // Filtra chegadas em GRU com progress_percent < 100
     const filteredArrivals = arrivals.filter(flight => {
       return (
         flight.destination &&
@@ -48,7 +47,7 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
             let delayClass = 'delay-zero';
             if (flight.delay > 0) delayClass = 'delay-positive';
             else if (flight.delay < 0) delayClass = 'delay-negative';
-            // Mudança: Origem agora mostra origin.code_iata
+            // Origem usando code_iata
             return `
               <tr>
                 <td>${flight.operator_icao || '-'}</td>
