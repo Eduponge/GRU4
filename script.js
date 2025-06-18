@@ -1,23 +1,21 @@
 fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
   .then(res => res.json())
   .then(data => {
+    // Pega as chegadas, ou array vazio se não houver dados válidos
     const arrivals = (data && data.success && data.data.arrivals) ? data.data.arrivals : [];
     if (!arrivals.length) {
       document.getElementById('flights').innerText = 'Nenhum voo encontrado.';
       return;
     }
 
-    // Hora atual em America/Sao_Paulo (com seconds zerados para evitar inconsistências de segundo)
-    const now = new Date();
-    const nowSaoPaulo = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    nowSaoPaulo.setSeconds(0, 0);
-
-    // Filtra voos cujo ETA (estimated_in) seja maior que a data/hora/minuto atual
+    // Filtra voos cuja chegada é para GRU e progress_percent < 100
     const filteredArrivals = arrivals.filter(flight => {
-      if (!flight.estimated_in) return false;
-      const etaSaoPaulo = new Date(new Date(flight.estimated_in).toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-      etaSaoPaulo.setSeconds(0, 0);
-      return etaSaoPaulo > nowSaoPaulo;
+      return (
+        flight.destination &&
+        (flight.destination.code_icao === "SBGR" || flight.destination.code_iata === "GRU") &&
+        typeof flight.progress_percent === "number" &&
+        flight.progress_percent < 100
+      );
     });
 
     // Calcula o atraso em minutos para cada voo restante
@@ -50,12 +48,12 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
             let delayClass = 'delay-zero';
             if (flight.delay > 0) delayClass = 'delay-positive';
             else if (flight.delay < 0) delayClass = 'delay-negative';
-            // Origem: origin.code_icao
+            // Mudança: Origem agora mostra origin.code_iata
             return `
               <tr>
                 <td>${flight.operator_icao || '-'}</td>
                 <td>${flight.ident_iata || '-'}</td>
-                <td>${flight.origin && flight.origin.code_icao ? flight.origin.code_icao : '-'}</td>
+                <td>${flight.origin && flight.origin.code_iata ? flight.origin.code_iata : '-'}</td>
                 <td>${sta}</td>
                 <td>${eta}</td>
                 <td class="${delayClass}">${flight.delay}</td>
