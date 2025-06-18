@@ -12,23 +12,43 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
     allFlights.forEach(f => { flightsMap[f.ident] = f; });
     const flights = Object.values(flightsMap);
 
-    // Filtra voos que chegam em GRU (arrival) e que saem de GRU (departure)
-    const isGRU = f =>
-      (f.code_icao === "SBGR" || f.code_iata === "GRU" ||
-       f.origin_code_icao === "SBGR" || f.origin_code_iata === "GRU" ||
-       f.destination_code_icao === "SBGR" || f.destination_code_iata === "GRU");
+    // DEBUG: veja o formato real dos primeiros voos
+    if (flights.length) {
+      console.log("Amostra de voos:", flights.slice(0, 5));
+    } else {
+      console.log("Nenhum voo recebido da API.");
+    }
 
-    const arrivalsGRU = flights.filter(f =>
-      (f.destination_code_icao === "SBGR" || f.destination_code_iata === "GRU") && isGRU(f)
-    );
-    const departuresGRU = flights.filter(f =>
-      (f.origin_code_icao === "SBGR" || f.origin_code_iata === "GRU") && isGRU(f)
-    );
+    // Função para checar se o voo é chegada em GRU
+    function isArrivalGRU(f) {
+      // Tenta vários campos possíveis
+      return (
+        (f.destination_code_icao === "SBGR" || f.destination_code_iata === "GRU") ||
+        (f.destination && (f.destination.code_icao === "SBGR" || f.destination.code_iata === "GRU")) ||
+        (f.airport_dest && (f.airport_dest.code_icao === "SBGR" || f.airport_dest.code_iata === "GRU"))
+      );
+    }
+
+    // Função para checar se o voo é partida de GRU
+    function isDepartureGRU(f) {
+      // Tenta vários campos possíveis
+      return (
+        (f.origin_code_icao === "SBGR" || f.origin_code_iata === "GRU") ||
+        (f.origin && (f.origin.code_icao === "SBGR" || f.origin.code_iata === "GRU")) ||
+        (f.airport_orig && (f.airport_orig.code_icao === "SBGR" || f.airport_orig.code_iata === "GRU"))
+      );
+    }
+
+    const arrivalsGRU = flights.filter(isArrivalGRU);
+    const departuresGRU = flights.filter(isDepartureGRU);
 
     function getDelayMin(f) {
-      if (!f.scheduled_in || !f.estimated_in) return null;
-      const sched = new Date(f.scheduled_in);
-      const estim = new Date(f.estimated_in);
+      // Aceita tanto string quanto Date
+      let sched = f.scheduled_in || (f.scheduled && f.scheduled.in);
+      let estim = f.estimated_in || (f.estimated && f.estimated.in);
+      if (!sched || !estim) return null;
+      sched = new Date(sched);
+      estim = new Date(estim);
       return Math.round((estim - sched) / 60000);
     }
 
@@ -38,6 +58,13 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
       if (delay > 5) return 'delay-med';
       if (delay >= -5) return 'delay-ok';
       return 'delay-early';
+    }
+
+    function formatDate(value) {
+      if (!value) return '-';
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleString('pt-BR');
     }
 
     function renderTable(voos, tipo) {
@@ -60,12 +87,15 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
           <th>Progresso (%)</th>
         </tr></thead><tbody>`;
       voos.forEach(flight => {
+        // Aceita campos alternativos de scheduled_in e estimated_in
+        let sched = flight.scheduled_in || (flight.scheduled && flight.scheduled.in);
+        let estim = flight.estimated_in || (flight.estimated && flight.estimated.in);
         const atraso = getDelayMin(flight);
         html += `<tr>
           <td>${flight.ident}</td>
           <td class="status-${flight.status?.toLowerCase() || 'unknown'}">${flight.status ?? '-'}</td>
-          <td>${flight.scheduled_in ? new Date(flight.scheduled_in).toLocaleString('pt-BR') : '-'}</td>
-          <td>${flight.estimated_in ? new Date(flight.estimated_in).toLocaleString('pt-BR') : '-'}</td>
+          <td>${formatDate(sched)}</td>
+          <td>${formatDate(estim)}</td>
           <td class="${delayColor(atraso)}">${atraso !== null ? atraso : '-'}</td>
           <td>${flight.progress_percent ?? '-'}</td>
         </tr>`;
