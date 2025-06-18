@@ -7,27 +7,36 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
       return;
     }
 
-    // Filtra chegadas em GRU com progress_percent < 100
+    // Filtro robusto para GRU e progress_percent < 100
     const filteredArrivals = arrivals.filter(flight => {
+      // Protege contra campos ausentes
+      const destIcao = flight.destination?.code_icao;
+      const destIata = flight.destination?.code_iata;
+      const progress = typeof flight.progress_percent === "number" ? flight.progress_percent : null;
       return (
-        flight.destination &&
-        (flight.destination.code_icao === "SBGR" || flight.destination.code_iata === "GRU") &&
-        typeof flight.progress_percent === "number" &&
-        flight.progress_percent < 100
+        (destIcao === "SBGR" || destIata === "GRU") &&
+        progress !== null &&
+        progress < 100
       );
     });
 
-    // Calcula o atraso em minutos para cada voo restante
+    // Exibe mensagem se nenhum voo passar no filtro
+    if (!filteredArrivals.length) {
+      document.getElementById('flights').innerText = 'Nenhum voo encontrado.';
+      return;
+    }
+
+    // Calcula atraso
     filteredArrivals.forEach(flight => {
       const sta = new Date(flight.scheduled_in);
       const eta = new Date(flight.estimated_in);
       flight.delay = Math.round((eta - sta) / 60000); // atraso em minutos
     });
 
-    // Ordena do mais atrasado para o mais adiantado
+    // Ordena por atraso
     filteredArrivals.sort((a, b) => b.delay - a.delay);
 
-    // Monta a tabela
+    // Monta tabela
     const html = `
       <table class="flights-table">
         <thead>
@@ -47,12 +56,12 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
             let delayClass = 'delay-zero';
             if (flight.delay > 0) delayClass = 'delay-positive';
             else if (flight.delay < 0) delayClass = 'delay-negative';
-            // Origem usando code_iata
+            // Origem: sempre code_iata
             return `
               <tr>
                 <td>${flight.operator_icao || '-'}</td>
                 <td>${flight.ident_iata || '-'}</td>
-                <td>${flight.origin && flight.origin.code_iata ? flight.origin.code_iata : '-'}</td>
+                <td>${flight.origin?.code_iata || '-'}</td>
                 <td>${sta}</td>
                 <td>${eta}</td>
                 <td class="${delayClass}">${flight.delay}</td>
