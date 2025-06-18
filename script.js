@@ -7,13 +7,6 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
       return;
     }
 
-    // Calcula atraso (delay)
-    arrivals.forEach(flight => {
-      const sta = flight.scheduled_in ? new Date(flight.scheduled_in) : null;
-      const eta = flight.estimated_in ? new Date(flight.estimated_in) : null;
-      flight.delay = (sta && eta) ? Math.round((eta - sta) / 60000) : '-';
-    });
-
     // Monta HTML da tabela
     const html = `
       <table class="flights-table">
@@ -34,9 +27,6 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
           ${arrivals.map(flight => {
             const sta = flight.scheduled_in ? new Date(flight.scheduled_in).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }) : '-';
             const eta = flight.estimated_in ? new Date(flight.estimated_in).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }) : '-';
-            let delayClass = 'delay-zero';
-            if (flight.delay !== '-' && flight.delay > 0) delayClass = 'delay-positive';
-            else if (flight.delay !== '-' && flight.delay < 0) delayClass = 'delay-negative';
             return `
               <tr>
                 <td>${flight.operator_icao || '-'}</td>
@@ -45,7 +35,7 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
                 <td>${flight.destination?.code_iata || '-'}</td>
                 <td>${sta}</td>
                 <td>${eta}</td>
-                <td class="${delayClass}">${flight.delay}</td>
+                <td>-</td>
                 <td>${flight.progress_percent !== null && flight.progress_percent !== undefined ? flight.progress_percent : '-'}</td>
                 <td>${flight.status || '-'}</td>
               </tr>
