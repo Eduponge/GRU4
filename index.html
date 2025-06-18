@@ -2,14 +2,64 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Chegadas de Voos</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Lista de Voos</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    .flights-table { border-collapse: collapse; width: 100%; }
+    .flights-table th, .flights-table td { border: 1px solid #aaa; padding: 6px; }
+    .flights-table th { background: #eee; }
+  </style>
 </head>
 <body>
-  <h1>Chegadas de Voos</h1>
-  <div id="flights">
-    Carregando voos...
-  </div>
-  <script src="script.js"></script>
+  <h1>Todos os Voos (sem filtro)</h1>
+  <div id="flights">Carregando...</div>
+  <script>
+    fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
+      .then(res => res.json())
+      .then(data => {
+        const arrivals = (data && data.success && data.data.arrivals) ? data.data.arrivals : [];
+        // Debug: veja todos os voos no console
+        console.log("Voos recebidos:", arrivals.map(v => v.ident));
+        if (!arrivals.length) {
+          document.getElementById('flights').innerText = 'Nenhum voo encontrado.';
+          return;
+        }
+        // Monta HTML da tabela
+        let html = `
+          <table class="flights-table">
+            <thead>
+              <tr>
+                <th>Ident</th>
+                <th>Companhia</th>
+                <th>Número Voo</th>
+                <th>Origem</th>
+                <th>Destino</th>
+                <th>Status</th>
+                <th>Progress (%)</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        arrivals.forEach(flight => {
+          html += `
+            <tr>
+              <td>${flight.ident || '-'}</td>
+              <td>${flight.operator_icao || '-'}</td>
+              <td>${flight.flight_number || '-'}</td>
+              <td>${flight.origin?.code_iata || '-'}</td>
+              <td>${flight.destination?.code_iata || '-'}</td>
+              <td>${flight.status || '-'}</td>
+              <td>${flight.progress_percent ?? '-'}</td>
+            </tr>
+          `;
+        });
+        html += '</tbody></table>';
+        document.getElementById('flights').innerHTML = html;
+      })
+      .catch(e => {
+        document.getElementById('flights').innerText = 'Erro ao carregar os voos.';
+        console.error(e);
+      });
+  </script>
 </body>
 </html>
