@@ -48,15 +48,34 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
       return 'delay-early';
     }
 
-    function formatDate(value) {
+    // Formata apenas hora/minuto
+    function formatHour(value) {
       if (!value) return '-';
       const d = new Date(value);
       if (isNaN(d.getTime())) return '-';
-      return d.toLocaleString('pt-BR');
+      return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     }
 
     function getEstimatedIn(f) {
       return f.estimated_in || (f.estimated && f.estimated.in);
+    }
+
+    function getOriginIata(f) {
+      return (
+        (f.origin && f.origin.code_iata) ||
+        f.origin_code_iata ||
+        (f.airport_orig && f.airport_orig.code_iata) ||
+        '-'
+      );
+    }
+
+    function getDestinationIata(f) {
+      return (
+        (f.destination && f.destination.code_iata) ||
+        f.destination_code_iata ||
+        (f.airport_dest && f.airport_dest.code_iata) ||
+        '-'
+      );
     }
 
     function renderTable(voos, tipo) {
@@ -72,8 +91,13 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
       let html = `<h2>${tipo}</h2>`;
       html += `<div class="table-responsive"><table class="flights-table"><thead>
         <tr>
-          <th>Ident</th>
-          <th>Status</th>
+          <th>Ident</th>`;
+      if (tipo.startsWith('Chegadas')) {
+        html += `<th>Origem</th>`;
+      } else {
+        html += `<th>Destino</th>`;
+      }
+      html += `<th>Status</th>
           <th>Previsto</th>
           <th>Estimado</th>
           <th>Atraso/<br>Antecipação (min)</th>
@@ -84,10 +108,16 @@ fetch('https://v0-new-project-wndpayl978c.vercel.app/api/flights-complete')
         let estim = flight.estimated_in || (flight.estimated && flight.estimated.in);
         const atraso = getDelayMin(flight);
         html += `<tr>
-          <td>${flight.ident}</td>
+          <td>${flight.ident}</td>`;
+        if (tipo.startsWith('Chegadas')) {
+          html += `<td>${getOriginIata(flight)}</td>`;
+        } else {
+          html += `<td>${getDestinationIata(flight)}</td>`;
+        }
+        html += `
           <td class="status-${flight.status?.toLowerCase() || 'unknown'}">${flight.status ?? '-'}</td>
-          <td>${formatDate(sched)}</td>
-          <td>${formatDate(estim)}</td>
+          <td>${formatHour(sched)}</td>
+          <td>${formatHour(estim)}</td>
           <td class="${delayColor(atraso)}">${atraso !== null ? atraso : '-'}</td>
           <td>${flight.progress_percent ?? '-'}</td>
         </tr>`;
